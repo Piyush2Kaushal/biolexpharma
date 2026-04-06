@@ -1,0 +1,67 @@
+const Product = require('../models/Product');
+const Category = require('../models/Category');
+const Inquiry = require('../models/Inquiry');
+
+// GET /api/stats  (admin only)
+const getStats = async (req, res, next) => {
+  try {
+    const [totalProducts, totalCategories, totalInquiries, inquiryStatuses, productsByCategory] =
+      await Promise.all([
+        Product.countDocuments(),
+        Category.countDocuments(),
+        Inquiry.countDocuments(),
+        Inquiry.aggregate([
+          { $group: { _id: '$status', count: { $sum: 1 } } },
+        ]),
+        Product.aggregate([
+          {
+            $lookup: {
+              from: 'categories',
+              localField: 'category',
+              foreignField: '_id',
+              as: 'categoryInfo',
+            },
+          },
+          { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+          {
+            $group: {
+              _id: '$categoryInfo.name',
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { count: -1 } },
+        ]),
+      ]);
+
+    // Format inquiry status counts
+    const statusMap = { pending: 0, contacted: 0, resolved: 0 };
+    inquiryStatuses.forEach((s) => {
+      if (s._id in statusMap) statusMap[s._id] = s.count;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalProducts,
+        totalCategories,
+        totalInquiries,
+        pendingInquiries: statusMap.pending,
+        contactedInquiries: statusMap.contacted,
+        resolvedInquiries: statusMap.resolved,
+        productsByCategory: productsByCategory.map((p) => ({
+          name: p._id || 'Uncategorized',
+          count: p.count,
+        })),
+        inquiriesByStatus: [
+          { status: 'Pending', count: statusMap.pending, fill: '#f59e0b' },
+          { status: 'Contacted', count: statusMap.contacted, fill: '#3b82f6' },
+          { status: 'Resolved', count: statusMap.resolved, fill: '#10b981' },
+        ],
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getStats };
