@@ -1,5 +1,5 @@
-const Product = require('../models/Product');
-const { cloudinary } = require('../config/cloudinary');
+const Product = require("../models/Product");
+const { cloudinary } = require("../config/cloudinary");
 
 const formatProduct = (product) => {
   const obj = product.toObject({ virtuals: true });
@@ -13,13 +13,14 @@ const formatProduct = (product) => {
     packagingSize: obj.packagingSize || null,
     brand: obj.brand || null,
     form: obj.form || null,
-    countryOfOrigin: obj.countryOfOrigin || 'India',
+    countryOfOrigin: obj.countryOfOrigin || "India",
     composition: obj.composition || null,
     dosage: obj.dosage || null,
     storage: obj.storage || null,
     sideEffects: obj.sideEffects || null,
     additionalDetails: obj.additionalDetails || [],
     isFeatured: obj.isFeatured || false,
+    views: obj.views || 0,
     createdAt: obj.createdAt,
   };
 };
@@ -28,46 +29,88 @@ const getAll = async (req, res, next) => {
   try {
     const filter = {};
     if (req.query.category) filter.category = req.query.category;
-    if (req.query.featured === 'true') filter.isFeatured = true;
+    if (req.query.featured === "true") filter.isFeatured = true;
 
     const products = await Product.find(filter)
-      .populate('category', 'name')
+      .populate("category", "name")
       .sort({ isFeatured: -1, createdAt: -1 });
 
     res.json({ success: true, data: products.map(formatProduct) });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 const getById = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id).populate('category', 'name');
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    ).populate("category", "name");
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     res.json({ success: true, data: formatProduct(product) });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 const create = async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ success: false, message: 'Product image is required.' });
+    if (!req.file)
+      return res
+        .status(400)
+        .json({ success: false, message: "Product image is required." });
 
-    const { name, description, category, packagingSize, brand, form, countryOfOrigin, composition, dosage, storage, sideEffects, additionalDetails, isFeatured } = req.body;
+    const {
+      name,
+      description,
+      category,
+      packagingSize,
+      brand,
+      form,
+      countryOfOrigin,
+      composition,
+      dosage,
+      storage,
+      sideEffects,
+      additionalDetails,
+      isFeatured,
+    } = req.body;
 
     let parsedAdditional = [];
-    if (additionalDetails) { try { parsedAdditional = JSON.parse(additionalDetails); } catch (_) {} }
+    if (additionalDetails) {
+      try {
+        parsedAdditional = JSON.parse(additionalDetails);
+      } catch (_) {}
+    }
 
     const product = await Product.create({
-      name, description, category,
-      image: req.file.path, imagePublicId: req.file.filename,
-      packagingSize, brand, form, countryOfOrigin: countryOfOrigin || 'India',
-      composition, dosage, storage, sideEffects,
+      name,
+      description,
+      category,
+      image: req.file.path,
+      imagePublicId: req.file.filename,
+      packagingSize,
+      brand,
+      form,
+      countryOfOrigin: countryOfOrigin || "India",
+      composition,
+      dosage,
+      storage,
+      sideEffects,
       additionalDetails: parsedAdditional,
-      isFeatured: isFeatured === 'true',
+      isFeatured: isFeatured === "true",
     });
 
-    const populated = await product.populate('category', 'name');
+    const populated = await product.populate("category", "name");
     res.status(201).json({ success: true, data: formatProduct(populated) });
   } catch (error) {
-    if (req.file?.filename) await cloudinary.uploader.destroy(req.file.filename).catch(() => {});
+    if (req.file?.filename)
+      await cloudinary.uploader.destroy(req.file.filename).catch(() => {});
     next(error);
   }
 };
@@ -75,9 +118,26 @@ const create = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
 
-    const { name, description, category, packagingSize, brand, form, countryOfOrigin, composition, dosage, storage, sideEffects, additionalDetails, isFeatured } = req.body;
+    const {
+      name,
+      description,
+      category,
+      packagingSize,
+      brand,
+      form,
+      countryOfOrigin,
+      composition,
+      dosage,
+      storage,
+      sideEffects,
+      additionalDetails,
+      isFeatured,
+    } = req.body;
 
     if (name) product.name = name;
     if (description) product.description = description;
@@ -85,25 +145,34 @@ const update = async (req, res, next) => {
     if (packagingSize !== undefined) product.packagingSize = packagingSize;
     if (brand !== undefined) product.brand = brand;
     if (form !== undefined) product.form = form;
-    if (countryOfOrigin !== undefined) product.countryOfOrigin = countryOfOrigin;
+    if (countryOfOrigin !== undefined)
+      product.countryOfOrigin = countryOfOrigin;
     if (composition !== undefined) product.composition = composition;
     if (dosage !== undefined) product.dosage = dosage;
     if (storage !== undefined) product.storage = storage;
     if (sideEffects !== undefined) product.sideEffects = sideEffects;
-    if (isFeatured !== undefined) product.isFeatured = isFeatured === 'true';
-    if (additionalDetails !== undefined) { try { product.additionalDetails = JSON.parse(additionalDetails); } catch (_) {} }
+    if (isFeatured !== undefined) product.isFeatured = isFeatured === "true";
+    if (additionalDetails !== undefined) {
+      try {
+        product.additionalDetails = JSON.parse(additionalDetails);
+      } catch (_) {}
+    }
 
     if (req.file) {
-      if (product.imagePublicId) await cloudinary.uploader.destroy(product.imagePublicId).catch(() => {});
+      if (product.imagePublicId)
+        await cloudinary.uploader
+          .destroy(product.imagePublicId)
+          .catch(() => {});
       product.image = req.file.path;
       product.imagePublicId = req.file.filename;
     }
 
     await product.save();
-    const populated = await product.populate('category', 'name');
+    const populated = await product.populate("category", "name");
     res.json({ success: true, data: formatProduct(populated) });
   } catch (error) {
-    if (req.file?.filename) await cloudinary.uploader.destroy(req.file.filename).catch(() => {});
+    if (req.file?.filename)
+      await cloudinary.uploader.destroy(req.file.filename).catch(() => {});
     next(error);
   }
 };
@@ -111,10 +180,50 @@ const update = async (req, res, next) => {
 const remove = async (req, res, next) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
-    if (product.imagePublicId) await cloudinary.uploader.destroy(product.imagePublicId).catch(() => {});
-    res.json({ success: true, message: 'Product deleted successfully.' });
-  } catch (error) { next(error); }
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
+    if (product.imagePublicId)
+      await cloudinary.uploader.destroy(product.imagePublicId).catch(() => {});
+    res.json({ success: true, message: "Product deleted successfully." });
+  } catch (error) {
+    next(error);
+  }
 };
 
-module.exports = { getAll, getById, create, update, remove };
+const bulkDelete = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "ids must be a non-empty array." });
+    }
+
+    // Fetch products to get their Cloudinary public IDs before deletion
+    const products = await Product.find({ _id: { $in: ids } });
+
+    // Delete Cloudinary images in parallel (best-effort)
+    const { cloudinary } = require("../config/cloudinary");
+    await Promise.all(
+      products
+        .filter((p) => p.imagePublicId)
+        .map((p) =>
+          cloudinary.uploader.destroy(p.imagePublicId).catch(() => {})
+        )
+    );
+
+    const result = await Product.deleteMany({ _id: { $in: ids } });
+
+    res.json({
+      success: true,
+      message: `${result.deletedCount} product(s) deleted successfully.`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAll, getById, create, update, remove, bulkDelete };

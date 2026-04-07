@@ -1,4 +1,4 @@
-const Inquiry = require('../models/Inquiry');
+const Inquiry = require("../models/Inquiry");
 
 // Helper: format inquiry with productName
 const formatInquiry = (inquiry) => {
@@ -21,7 +21,8 @@ const formatInquiry = (inquiry) => {
 // POST /api/inquiries  (public)
 const create = async (req, res, next) => {
   try {
-    const { name, email, phone, company, quantity, message, productId } = req.body;
+    const { name, email, phone, company, quantity, message, productId } =
+      req.body;
 
     const inquiry = await Inquiry.create({
       name,
@@ -35,7 +36,7 @@ const create = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Inquiry submitted successfully. We will contact you soon.',
+      message: "Inquiry submitted successfully. We will contact you soon.",
       data: inquiry,
     });
   } catch (error) {
@@ -47,7 +48,7 @@ const create = async (req, res, next) => {
 const getAll = async (req, res, next) => {
   try {
     const inquiries = await Inquiry.find()
-      .populate('productId', 'name')
+      .populate("productId", "name")
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: inquiries.map(formatInquiry) });
@@ -65,10 +66,12 @@ const updateStatus = async (req, res, next) => {
       req.params.id,
       { status },
       { new: true, runValidators: true }
-    ).populate('productId', 'name');
+    ).populate("productId", "name");
 
     if (!inquiry) {
-      return res.status(404).json({ success: false, message: 'Inquiry not found.' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Inquiry not found." });
     }
 
     res.json({ success: true, data: formatInquiry(inquiry) });
