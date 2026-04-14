@@ -25,9 +25,6 @@ const defaultContent = {
     heroBadge: "ISO 9001:2015 | WHO-GMP Supported Manufacturing",
     heroCta1: "Browse Products",
     heroCta2: "Get Quote",
-    featuresTitle: "Why Biolex Pharmaceutical?",
-    featuresSubtitle:
-      "Your reliable partner for quality pharmaceutical products",
     statsYears: "5+",
     statsProducts: "500+",
     statsPartners: "100+",
@@ -44,6 +41,7 @@ const defaultContent = {
     whyUsTitle: "Why Choose Biolex?",
     whyUsSubtitle:
       "We go beyond just supplying medicines — we build lasting partnerships",
+    bannerImages: [],
   },
   about: {
     heroTitle: "About Biolex Pharmaceutical",

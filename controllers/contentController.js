@@ -70,6 +70,117 @@ const updateContent = async (req, res, next) => {
   }
 };
 
+const uploadHeroImage = async (req, res, next) => {
+  try {
+    if (!req.file)
+      return res
+        .status(400)
+        .json({ success: false, message: "No image uploaded." });
+
+    // multer-storage-cloudinary already uploaded the file.
+    // req.file.path is the secure Cloudinary URL.
+    const heroImageUrl = req.file.path;
+
+    const existing = await SiteContent.getContent("home");
+    const merged = { ...existing, heroImage: heroImageUrl };
+    await SiteContent.findOneAndUpdate(
+      { section: "home" },
+      { content: merged },
+      { upsert: true }
+    );
+
+    res.json({
+      success: true,
+      data: { heroImage: heroImageUrl },
+      message: "Hero image uploaded!",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteHeroImage = async (req, res, next) => {
+  try {
+    const existing = await SiteContent.getContent("home");
+    const merged = { ...existing, heroImage: "" };
+    await SiteContent.findOneAndUpdate(
+      { section: "home" },
+      { content: merged },
+      { upsert: true }
+    );
+    res.json({ success: true, message: "Hero image removed." });
+  } catch (error) {
+    next(error);
+  }
+};
+// POST /api/content/home/banner-images — admin only, add a banner image (max 5)
+const uploadBannerImage = async (req, res, next) => {
+  try {
+    if (!req.file)
+      return res
+        .status(400)
+        .json({ success: false, message: "No image uploaded." });
+
+    const existing = await SiteContent.getContent("home");
+    const bannerImages = Array.isArray(existing.bannerImages)
+      ? existing.bannerImages
+      : [];
+
+    if (bannerImages.length >= 5)
+      return res
+        .status(400)
+        .json({ success: false, message: "Maximum 5 banner images allowed." });
+
+    bannerImages.push(req.file.path);
+    const merged = { ...existing, bannerImages };
+    await SiteContent.findOneAndUpdate(
+      { section: "home" },
+      { content: merged },
+      { upsert: true }
+    );
+
+    res.json({
+      success: true,
+      data: { bannerImages },
+      message: "Banner image uploaded!",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// DELETE /api/content/home/banner-images/:index — admin only, remove a banner image by index
+const deleteBannerImage = async (req, res, next) => {
+  try {
+    const index = parseInt(req.params.index, 10);
+    const existing = await SiteContent.getContent("home");
+    const bannerImages = Array.isArray(existing.bannerImages)
+      ? [...existing.bannerImages]
+      : [];
+
+    if (isNaN(index) || index < 0 || index >= bannerImages.length)
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid index." });
+
+    bannerImages.splice(index, 1);
+    const merged = { ...existing, bannerImages };
+    await SiteContent.findOneAndUpdate(
+      { section: "home" },
+      { content: merged },
+      { upsert: true }
+    );
+
+    res.json({
+      success: true,
+      data: { bannerImages },
+      message: "Banner image removed.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // POST /api/content/:section/reset  — admin only, reset to defaults
 const resetContent = async (req, res, next) => {
   try {
@@ -97,4 +208,13 @@ const resetContent = async (req, res, next) => {
   }
 };
 
-module.exports = { getContent, getAllContent, updateContent, resetContent };
+module.exports = {
+  getContent,
+  getAllContent,
+  updateContent,
+  resetContent,
+  uploadHeroImage,
+  deleteHeroImage,
+  uploadBannerImage,
+  deleteBannerImage,
+};

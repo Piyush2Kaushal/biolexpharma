@@ -1,19 +1,42 @@
-const express = require('express');
+const express = require("express");
+const { upload } = require("../config/cloudinary");
+
 const router = express.Router();
-const { getAll, create, update, remove } = require('../controllers/categoryController');
-const { protect } = require('../middleware/auth');
-const { categoryRules, idParamRule, validate } = require('../middleware/validators');
+const {
+  getAll,
+  create,
+  update,
+  remove,
+} = require("../controllers/categoryController");
+const { protect } = require("../middleware/auth");
+const {
+  categoryRules,
+  idParamRule,
+  validate,
+} = require("../middleware/validators");
 
 // GET /api/categories  — public
-router.get('/', getAll);
+router.get("/", getAll);
 
-// POST /api/categories  — admin only
-router.post('/', protect, categoryRules, validate, create);
-
-// PUT /api/categories/:id  — admin only
-router.put('/:id', protect, idParamRule, categoryRules, validate, update);
+router.post(
+  "/",
+  protect,
+  upload.single("image"),
+  categoryRules,
+  validate,
+  create
+);
+router.put(
+  "/:id",
+  protect,
+  upload.single("image"),
+  idParamRule,
+  categoryRules,
+  validate,
+  update
+);
 
 // DELETE /api/categories/:id  — admin only
-router.delete('/:id', protect, idParamRule, validate, remove);
+router.delete("/:id", protect, idParamRule, validate, remove);
 
 module.exports = router;

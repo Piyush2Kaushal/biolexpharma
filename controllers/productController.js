@@ -2,7 +2,11 @@ const Product = require("../models/Product");
 const { cloudinary } = require("../config/cloudinary");
 
 const formatProduct = (product) => {
-  const obj = product.toObject({ virtuals: true });
+  // Support both lean() plain objects and full Mongoose documents
+  const obj =
+    typeof product.toObject === "function"
+      ? product.toObject({ virtuals: true })
+      : product;
   return {
     _id: obj._id,
     name: obj.name,
@@ -31,10 +35,21 @@ const getAll = async (req, res, next) => {
     if (req.query.category) filter.category = req.query.category;
     if (req.query.featured === "true") filter.isFeatured = true;
 
+    // Optional pagination — limit=0 means no limit (MongoDB default)
+    const limit = req.query.limit
+      ? Math.min(parseInt(req.query.limit) || 0, 500)
+      : 0;
+    const skip = req.query.skip ? parseInt(req.query.skip) || 0 : 0;
+
     const products = await Product.find(filter)
       .populate("category", "name")
-      .sort({ isFeatured: -1, createdAt: -1 });
+      .sort({ isFeatured: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(); // lean() returns plain JS objects — 2-3x faster than full Mongoose docs
 
+    // Cache public product list: 30s browser, 60s CDN/proxy
+    res.set("Cache-Control", "public, max-age=30, s-maxage=60");
     res.json({ success: true, data: products.map(formatProduct) });
   } catch (error) {
     next(error);

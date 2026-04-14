@@ -46,6 +46,12 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Compound indexes for the most common query patterns:
+// 1. getAll — sorted by isFeatured DESC + createdAt DESC (with optional category filter)
+// 2. getAll with category filter
+productSchema.index({ isFeatured: -1, createdAt: -1 });
+productSchema.index({ category: 1, isFeatured: -1, createdAt: -1 });
+
 productSchema.virtual("categoryName").get(function () {
   if (this.category && this.category.name) return this.category.name;
   return undefined;
